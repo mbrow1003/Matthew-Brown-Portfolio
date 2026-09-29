@@ -1,0 +1,15 @@
+Title,Location,Description,Checklist,Category,Status,Plan,X pos (%),Y pos (%)
+RD-01,Lobby,"Reception desk | SD-01 rev 1 | 144"" x 42"" x 30"" | PLAM Wilsonart 7939K + solid surface top | Field dim required, Template required, HOLD: field width 142-1/4"" vs 144"" drawn",L1-RECEPTION DESK,HOLD,Priority 1,A1.1,20.13,28.578
+BD-01,Lobby bar,"Bar die | SD-02 rev 2 | 216"" x 42"" x 24"" | Rift white oak, clear | Field dim required, MEP rough-in at unit",L1-BAR DIE,RELEASED TO SHOP,Priority 2,A1.1,61.029,52.063
+WP-01,Lobby - north wall,"Wall panel | SD-04 rev 2 | 96"" x 48"" | Rift white oak, clear | Field dim required, Blocking by others",L1-WALL PANEL,FIELD VERIFICATION,Priority 2,A1.1,26.471,14.108
+WP-02,Lobby - north wall,"Wall panel | SD-04 rev 2 | 96"" x 48"" | Rift white oak, clear | Field dim required, Blocking by others",L1-WALL PANEL,FIELD VERIFICATION,Priority 2,A1.1,35.294,14.108
+WP-03,Lobby - east wall,"Wall panel | SD-04 rev 2 | 72"" x 48"" | Rift white oak, clear | Field dim required, Blocking by others",L1-WALL PANEL,RELEASED TO SHOP,Priority 2,A1.1,48.502,22.896
+WP-04,Lobby - east wall,"Wall panel | SD-04 rev 2 | 72"" x 48"" | Rift white oak, clear | Field dim required, Blocking by others",L1-WALL PANEL,IN SHOP,Priority 2,A1.1,48.502,34.26
+WP-05,Lobby - elevator vestibule,"Wall panel | SD-04 rev 2 | 60"" x 96"" | Rift white oak, clear | Field dim required, Blocking by others",L1-WALL PANEL,INSTALLED,Priority 2,A1.1,54.779,14.108
+CT-01,Lobby bar,"Countertop - solid surface | SD-02 rev 2 | 216"" x 24"" | Corian Glacier White | Template required, Coordinate w/ BD-01",L1-COUNTERTOP,FIELD VERIFICATION,Priority 2,A1.1,55.036,48.131
+CT-02,Lobby,"Countertop - transaction top | SD-01 rev 1 | 144"" x 14"" | Corian Glacier White | Template required, Template after RD-01 released",L1-COUNTERTOP,FIELD VERIFICATION,Priority 2,A1.1,20.036,29.267
+V-101,Room 101,"Vanity | SD-06 rev 1 | 36"" x 34"" x 21"" | PLAM Wilsonart 7939K, cultured marble top | Field dim required, MEP rough-in at unit",L1-VANITY,ACCEPTED,Completed,A1.1,20.956,68.588
+V-102,Room 102,"Vanity | SD-06 rev 1 | 36"" x 34"" x 21"" | PLAM Wilsonart 7939K, cultured marble top | Field dim required, MEP rough-in at unit",L1-VANITY,DELIVERED,Priority 2,A1.1,32.721,68.588
+V-103,Room 103,"Vanity | SD-06 rev 1 | 36"" x 34"" x 21"" | PLAM Wilsonart 7939K, cultured marble top | Field dim required, MEP rough-in at unit",L1-VANITY,DELIVERED,Priority 2,A1.1,44.485,68.588
+V-104,Room 104,"Vanity | SD-06 rev 1 | 36"" x 34"" x 21"" | PLAM Wilsonart 7939K, cultured marble top | Field dim required, MEP rough-in at unit",L1-VANITY,IN SHOP,Priority 2,A1.1,56.25,68.588
+V-105,Room 105 (ADA),"Vanity - ADA | SD-06 rev 1 | 36"" x 34"" x 21"" | PLAM Wilsonart 7939K, cultured marble top | Field dim required, MEP rough-in at unit, ADA",L1-VANITY,FIELD VERIFICATION,Priority 2,A1.1,68.015,68.588

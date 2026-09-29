@@ -1,0 +1,86 @@
+Checklist,Item
+L1-RECEPTION DESK,"FIELD: Capture field dims (W between walls / H / D) - record on task, attach photo"
+L1-RECEPTION DESK,FIELD: Verify floor box and conduit stub locations against desk layout on SD-01
+L1-RECEPTION DESK,FIELD: Verify ADA transaction height and knee clearance per SD-01
+L1-RECEPTION DESK,FIELD: Verify blocking at wall-mounted sections
+L1-RECEPTION DESK,FIELD: Compare field dims to SD-01 rev 1 - mark MATCH or DEVIATION on task
+L1-RECEPTION DESK,FIELD: If DEVIATION - hold; drawing revised or condition corrected before release
+L1-RECEPTION DESK,GATE: RELEASED TO SHOP on SD-01 rev __ - PM name + date in task comment
+L1-RECEPTION DESK,SHOP: Cut list generated from the released rev
+L1-RECEPTION DESK,SHOP: Fabricated per ticket
+L1-RECEPTION DESK,SHOP: Dry fit multi-section unit before finish
+L1-RECEPTION DESK,SHOP: Finish verified against approved sample
+L1-RECEPTION DESK,SHOP: Hardware installed per schedule
+L1-RECEPTION DESK,"SHOP: QC - dims vs ticket, finish, function - shop lead name + date"
+L1-RECEPTION DESK,"SITE: Delivered - condition verified, damage noted with photo"
+L1-RECEPTION DESK,"SITE: Sections joined, seams aligned, installed level and plumb"
+L1-RECEPTION DESK,SITE: Transaction top installed (see CT-02 task)
+L1-RECEPTION DESK,"SITE: Hardware adjusted, doors and drawers aligned"
+L1-RECEPTION DESK,SITE: Punch complete
+L1-RECEPTION DESK,GATE: ACCEPTED - PM or GC name + date in task comment
+L1-BAR DIE,"FIELD: Capture field dims (overall W / H / D to clearance) - record on task, attach photo"
+L1-BAR DIE,FIELD: Verify floor box and conduit stub locations against die layout on SD-02
+L1-BAR DIE,"FIELD: Verify MEP rough-in locations (sink, supply/waste, power) against SD-02"
+L1-BAR DIE,FIELD: Verify floor level along the run - note high point
+L1-BAR DIE,FIELD: Verify ADA section height and clearance per SD-02
+L1-BAR DIE,FIELD: Compare field dims to SD-02 rev 2 - mark MATCH or DEVIATION on task
+L1-BAR DIE,FIELD: If DEVIATION - hold; drawing revised or condition corrected before release
+L1-BAR DIE,GATE: RELEASED TO SHOP on SD-02 rev __ - PM name + date in task comment
+L1-BAR DIE,SHOP: Cut list generated from the released rev
+L1-BAR DIE,SHOP: Fabricated per ticket
+L1-BAR DIE,SHOP: Dry fit multi-section unit before finish
+L1-BAR DIE,SHOP: Finish verified against approved sample
+L1-BAR DIE,SHOP: Hardware installed per schedule
+L1-BAR DIE,"SHOP: QC - dims vs ticket, finish, function - shop lead name + date"
+L1-BAR DIE,"SITE: Delivered - condition verified, damage noted with photo"
+L1-BAR DIE,"SITE: Sections joined, seams aligned, installed level and plumb"
+L1-BAR DIE,SITE: Top installed (see CT-01 task)
+L1-BAR DIE,"SITE: Hardware adjusted, doors and drawers aligned"
+L1-BAR DIE,SITE: Punch complete
+L1-BAR DIE,GATE: ACCEPTED - PM or GC name + date in task comment
+L1-WALL PANEL,"FIELD: Capture field dims (W / H) and locate penetrations (outlets, switches, thermostats) - record on task, attach photo"
+L1-WALL PANEL,FIELD: Verify blocking in wall at panel cleat locations per SD-04
+L1-WALL PANEL,HOLD: blocking not confirmed - confirm before RELEASED
+L1-WALL PANEL,FIELD: Verify wall plumb and flat - note out-of-plane
+L1-WALL PANEL,FIELD: Compare field dims to SD-04 rev 2 - mark MATCH or DEVIATION on task
+L1-WALL PANEL,FIELD: If DEVIATION - hold; drawing revised or condition corrected before release
+L1-WALL PANEL,GATE: RELEASED TO SHOP on SD-04 rev __ - PM name + date in task comment
+L1-WALL PANEL,SHOP: Cut list generated from the released rev
+L1-WALL PANEL,SHOP: Fabricated per ticket
+L1-WALL PANEL,SHOP: Finish verified against approved sample
+L1-WALL PANEL,"SHOP: QC - dims vs ticket, finish, edge condition - shop lead name + date"
+L1-WALL PANEL,"SITE: Delivered - condition verified, damage noted with photo"
+L1-WALL PANEL,"SITE: Installed per SD-04 - plumb, cleats engaged"
+L1-WALL PANEL,SITE: Reveals consistent per drawing
+L1-WALL PANEL,SITE: Punch complete
+L1-WALL PANEL,GATE: ACCEPTED - PM or GC name + date in task comment
+L1-COUNTERTOP,FIELD: Base unit installed and level before template
+L1-COUNTERTOP,FIELD: Template taken - attach photo of template on base unit
+L1-COUNTERTOP,FIELD: Sink / cutouts / seams marked on template per drawing
+L1-COUNTERTOP,HOLD: template pending - confirm before SHOP cut
+L1-COUNTERTOP,GATE: RELEASED TO FAB on template dated __ - PM name + date in task comment
+L1-COUNTERTOP,SHOP: Fabricated per template
+L1-COUNTERTOP,SHOP: Color and finish verified against approved sample
+L1-COUNTERTOP,"SHOP: QC - dims vs template, edge profile, cutouts - shop lead name + date"
+L1-COUNTERTOP,"SITE: Delivered - condition verified, damage noted with photo"
+L1-COUNTERTOP,SITE: Installed - seams located per approved drawing
+L1-COUNTERTOP,SITE: Sealed and caulked at walls and backsplash
+L1-COUNTERTOP,SITE: Punch complete
+L1-COUNTERTOP,GATE: ACCEPTED - PM or GC name + date in task comment
+L1-VANITY,"FIELD: Capture field dims (W between walls / H / D) - record on task, attach photo"
+L1-VANITY,FIELD: Verify supply and waste rough-in centerline against vanity layout on SD-06
+L1-VANITY,FIELD: Verify floor level at vanity - note high point
+L1-VANITY,FIELD: Compare field dims to SD-06 rev 1 - mark MATCH or DEVIATION on task
+L1-VANITY,FIELD: If DEVIATION - hold; drawing revised or condition corrected before release
+L1-VANITY,GATE: RELEASED TO SHOP on SD-06 rev __ - PM name + date in task comment
+L1-VANITY,SHOP: Cut list generated from the released rev
+L1-VANITY,SHOP: Fabricated per ticket
+L1-VANITY,SHOP: Finish verified against approved sample
+L1-VANITY,SHOP: Hardware installed per schedule
+L1-VANITY,"SHOP: QC - dims vs ticket, finish, function - shop lead name + date"
+L1-VANITY,"SITE: Delivered - condition verified, damage noted with photo"
+L1-VANITY,"SITE: Installed level and plumb, scribed to wall"
+L1-VANITY,SITE: Top set and sealed
+L1-VANITY,"SITE: Hardware adjusted, doors and drawers aligned"
+L1-VANITY,SITE: Punch complete
+L1-VANITY,GATE: ACCEPTED - PM or GC name + date in task comment

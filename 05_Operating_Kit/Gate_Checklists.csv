@@ -1,0 +1,15 @@
+Checklist,Item
+RECEIVING GATE,Confirm PO# and job# match BOL / packing slip
+RECEIVING GATE,Count pieces against slip (not from memory)
+RECEIVING GATE,Photo staged load (location-tagged)
+RECEIVING GATE,Log short-ship (on slip not in load) - vendor claim 48h
+RECEIVING GATE,Quarantine wrong / substituted items - do not install
+RECEIVING GATE,Photo any damage before signing
+RECEIVING GATE,Stage by heading / opening
+RECEIVING GATE,Sign name + date
+CLOSEOUT GATE,All heading-checklist hardware installed and operating
+CLOSEOUT GATE,Electrified: reader / power by others confirmed + operation verified
+CLOSEOUT GATE,Rated opening: fire label intact and visible
+CLOSEOUT GATE,Photo finished opening (both leaves on pairs)
+CLOSEOUT GATE,Punch items logged with photo + owner
+CLOSEOUT GATE,Sign name + date
