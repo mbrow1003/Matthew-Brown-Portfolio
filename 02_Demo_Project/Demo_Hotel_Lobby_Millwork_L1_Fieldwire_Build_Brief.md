@@ -1,6 +1,6 @@
 # Demo — Hotel Lobby Millwork L1 — Fieldwire Build Brief (FBB) & Deployment Steps
 
-**14 units · 1 held · 5 not released · 0 rev mismatches · 4 items owed by others.** Built from shop drawing set SD-01 through SD-06 (fictional). Brief rev 1, 9/8.
+**14 units · 1 held · 5 not released · 0 rev mismatches · 3 items owed by others.** Built from shop drawing set SD-01 through SD-06 (fictional). Brief rev 1, 9/8.
 
 ## 1. Source & scope
 
@@ -20,6 +20,7 @@ Every mark, dimension, and name in this brief is invented for demonstration.
 | Task rows in import | 14 |
 | Pinned at import | 14 (from the plan's text layer) |
 | Held | 1 |
+| Not released (field verification) | 5 |
 | Unpinned | 0 |
 
 14 = 14. Reconciles.
@@ -28,11 +29,11 @@ Every mark, dimension, and name in this brief is invented for demonstration.
 
 | Mark(s) | Finding | Source says | Found / changed to | Disposition | Owner | Status |
 |---|---|---|---|---|---|---|
-| RD-01 | Field width short of drawing | 144" (SD-01 r1) | 142-1/4" measured 9/8 by JT; delta −1-3/4" | Pending — revise drawing to 142-1/4" or accept with 7/8" filler each end | PM | HOLD — not released |
+| RD-01 | Field width short of drawing | 144" (SD-01 r1) | 142-1/4" measured 9/8 by AR; delta −1-3/4" | Pending — revise drawing to 142-1/4" or accept with 7/8" filler each end | PM | HOLD — not released |
 
 Multi-section unit with a templated solid surface top (CT-02). Building to 144" is a field cut on a finished unit or a remake. The gate stopped it at the compare line.
 
-## 4. Held
+## 4. Held and not released
 
 | Mark | Reason | Owner | Unblocks when |
 |---|---|---|---|
@@ -54,7 +55,6 @@ None — verified. All 14 units carry a pin extracted from the plan's text layer
 | Blocking in wall at panel cleats | WP-01, WP-02 | Framing sub | Release of both panels |
 | Floor box and conduit stub location at desk | RD-01 | Electrical | Release of RD-01 (with disposition) |
 | Supply / waste rough-in centerline, Room 105 | V-105 | Plumbing | Release of V-105 |
-| Bar die install before top template | CT-01 | Own crew — sequencing | Template for CT-01 |
 
 ## 7. Deployment steps
 
@@ -62,5 +62,5 @@ None — verified. All 14 units carry a pin extracted from the plan's text layer
 2. Plans: upload `A1-1_LEVEL_1_FLOOR_PLAN_DEMO.pdf` and confirm the plan name reads `A1.1` exactly — rename if not. The import's `Plan` column matches on it.
 3. Tasks → Import Tasks: import **one row first** (RD-01) and confirm the pin lands on its tag. On the tag → import the remaining 13. Constant offset → Fieldwire cropped the sheet; stop and rescale. Scattered → wrong file; stop.
 4. Check off checklist lines per unit to match its Category (see walkthrough note).
-5. Add the RD-01 task comment: `Field W 142-1/4" measured 9/8 by JT. SD-01 rev 1 shows 144". Delta -1-3/4". Disposition pending — revise drawing or accept with filler? Not released.`
+5. Add the RD-01 task comment: `Field W 142-1/4" measured 9/8 by AR. SD-01 rev 1 shows 144". Delta -1-3/4". Disposition pending — revise drawing or accept with filler? Not released.`
 6. Walk: RD-01 (held), V-101 (accepted), WP-04 (in shop).

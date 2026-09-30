@@ -16,7 +16,6 @@ Real engagements, described without client files, names, or project identifiers.
 **Proof points.**
 - First 30 days of the receiving gate: the first seven field shortage claims all failed verification — material was on site each time. The first genuine supplier miss surfaced through reconciliation, not a field report.
 - Day-one mobilization walk on one project: every bathroom opening came in roughly half an inch under clear height. All photographed and blocked before delivery; the GC requested the list to support a change order.
-
 - How shortage claims actually resolve: six closers reported missing had all shipped — the field's visual sort had misread two — and twelve reported surplus were tagged to openings. On another job, a three-floor walk found zero true short-ships; the one real gap was a hardware heading the supplier had never released. Each claim resolves to a driver on the ledger — false shortage, short, scope, waste — and each driver has a different payer. Root-cause before escalating.
 - Closeout diagnosis: an exit device that looked intact had never latched; a dead electrified lock traced from a 0 VDC reading to a missing door position switch. Evidence first, then the call.
 
@@ -33,7 +32,7 @@ Real engagements, described without client files, names, or project identifiers.
 - Reviewer changes buried in RFI responses and heading markups that had never reached the field: one exterior pair moved to a different hardware set; power supplies denied on five sets (monitored-only); every adhesive-mount protection plate changed to screw-mount; lever design changed on all exit devices; silencers added to roughly half the building.
 - Two plan sheets carrying a post-bid architect's supplemental instruction — the likeliest source of openings the architect added that the supplier never scheduled.
 
-**What was delivered.** A scoped, fixed-fee proposal: titles and descriptions on all 199 pins, 86 heading checklists built and attached, the 10 missing openings pinned, and a Fieldwire Build Brief listing every reviewer change, every held opening, and who owed the next answer. The client's scope turned out to be 80% installed rather than 20%, and the engagement was re-scoped for closeout rather than front-end build.
+**What was proposed.** A scoped, fixed-fee build: titles and descriptions on all 199 pins, 86 heading checklists built and attached, the 10 missing openings pinned, and a Fieldwire Build Brief listing every reviewer change, every held opening, and who owed the next answer. Before work started, the client's scope turned out to be 80% installed rather than 20%. The proposal was re-scoped for closeout, and the engagement hasn't gone forward.
 
 **What it taught.** The exceptions are the product. The CSVs are how they get executed.
 

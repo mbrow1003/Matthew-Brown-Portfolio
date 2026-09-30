@@ -226,7 +226,7 @@ This replaces the generic functional checklist from v1. Hardware is now itemized
 
 - **Exports:** files are UTF-16 and tab-delimited, with three rows above the header. "All Tasks (Summary)" has no Description or Checklist columns. "Open Tasks (Detailed)" leaves out completed tasks but includes checklist items and tags.
 
-- **No API on standard tiers.** Checklists are created by pasting into the builder or by hand in Project Settings.
+- **No API on standard tiers.** Checklists are created in Project Settings by pasting into the builder, by hand, or by a browser agent working from the paste file.
 
 ## 5. Process / Workflow
 
