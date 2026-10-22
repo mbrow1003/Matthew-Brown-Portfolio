@@ -18,7 +18,7 @@ The first two produce the same client-facing deliverable, the Fieldwire Build Br
 
 **03_Case_Notes** — the real engagements at pattern level: the subcontractor implementation, a 209-opening school renovation reconciliation, the millwork inquiry that produced the demo, four implementation runs with their numbers, and seven reconciliation and triage patterns. Numbers and findings, no files or names.
 
-**04_Resume** — one page. Phone number omitted from this public copy; email and LinkedIn are in the header.
+**Matthew_Brown_Resume.pdf** — one page, at the top level. Phone number omitted from this public copy; email and LinkedIn are in the header.
 
 **05_Operating_Kit** — the field layer around the Fieldwire build.
 - `Field_Gates.md` — site recon before mobilization, a receiving gate at every delivery, a closeout gate on every opening, and the missing-material filter that decides whether anything gets reordered. Only one path spends money.
