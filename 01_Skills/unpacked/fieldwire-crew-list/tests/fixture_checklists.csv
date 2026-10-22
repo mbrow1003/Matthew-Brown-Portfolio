@@ -1,0 +1,51 @@
+Checklist,Item
+L1-RECEPTION DESK,FIELD: Verify wall length and floor level at desk location
+L1-RECEPTION DESK,FIELD: Compare field dims to shop drawing SD-01
+L1-RECEPTION DESK,HOLD: Transaction top profile pending designer selection - confirm before release
+L1-RECEPTION DESK,GATE: RELEASED - PM signs shop drawing rev with field dims
+L1-RECEPTION DESK,SHOP: Cut list issued from released drawing
+L1-RECEPTION DESK,SHOP: Fabricated and finished per sample
+L1-RECEPTION DESK,SITE: Delivered and staged
+L1-RECEPTION DESK,SITE: Installed level and scribed
+L1-RECEPTION DESK,SITE: Punch items cleared
+L1-RECEPTION DESK,GATE: ACCEPTED - GC walk signed
+L1-BAR DIE,FIELD: Verify bar die layout against plan
+L1-BAR DIE,FIELD: Compare field dims to shop drawing SD-02
+L1-BAR DIE,GATE: RELEASED - PM signs shop drawing rev with field dims
+L1-BAR DIE,SHOP: Cut list issued from released drawing
+L1-BAR DIE,SHOP: Fabricated and finished per sample
+L1-BAR DIE,SITE: Delivered and staged
+L1-BAR DIE,SITE: Installed level and anchored
+L1-BAR DIE,GATE: ACCEPTED - GC walk signed
+L1-WALL PANEL,FIELD: Verify blocking at cleat heights
+L1-WALL PANEL,FIELD: Compare field dims to shop drawing SD-04
+L1-WALL PANEL,GATE: RELEASED - PM signs shop drawing rev with field dims
+L1-WALL PANEL,SHOP: Cut list issued from released drawing
+L1-WALL PANEL,SHOP: Fabricated and finished per sample
+L1-WALL PANEL,SITE: Delivered and staged
+L1-WALL PANEL,SITE: Installed on cleats with reveals even
+L1-WALL PANEL,SITE: Punch items cleared
+L1-WALL PANEL,GATE: ACCEPTED - GC walk signed
+L1-COUNTERTOP,FIELD: Template after bar die is set
+L1-COUNTERTOP,FIELD: Compare template to shop drawing SD-05
+L1-COUNTERTOP,GATE: RELEASED - PM signs template
+L1-COUNTERTOP,SHOP: Fabricated from template
+L1-COUNTERTOP,SITE: Delivered and staged
+L1-COUNTERTOP,SITE: Installed and sealed
+L1-COUNTERTOP,GATE: ACCEPTED - GC walk signed
+L1-VANITY,FIELD: Verify rough-in centerline and wall length
+L1-VANITY,FIELD: Compare field dims to shop drawing SD-06
+L1-VANITY,GATE: RELEASED - PM signs shop drawing rev with field dims
+L1-VANITY,SHOP: Cut list issued from released drawing
+L1-VANITY,SHOP: Fabricated and finished per sample
+L1-VANITY,SITE: Delivered and staged
+L1-VANITY,SITE: Installed level and sealed
+L1-VANITY,GATE: ACCEPTED - GC walk signed
+RECEIVING GATE,Confirm PO# and job# match BOL / packing slip
+RECEIVING GATE,Count pieces against slip (not from memory)
+RECEIVING GATE,Photo staged load (location-tagged)
+RECEIVING GATE,Log short-ship (on slip - not in load) - vendor claim 48h
+RECEIVING GATE,Quarantine wrong / substituted items - do not install
+RECEIVING GATE,Photo any damage before signing
+RECEIVING GATE,Stage by heading / opening
+RECEIVING GATE,Sign name + date

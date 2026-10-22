@@ -1,0 +1,8 @@
+{
+  "_comment": "Golden flags for the baseline fixture (tests/fixture_tasks.csv + fixture_checklists.csv, cutoff 2026-09-08). Tasks absent here must carry no flag. Reviewed by hand against the fixture rules, not recorded from a run.",
+  "RD-01": ["FAILED ITEM"],
+  "CT-02": ["CONFIRM SET", "NO PHOTO"],
+  "V-103": ["CLOSED WITH OPEN ITEMS (Completed)"],
+  "V-104": ["NO PHOTO"],
+  "Receiving - BOL 4471 (25 Aug)": ["RECEIVING GATE OPEN 14 DAYS", "NO PHOTO"]
+}

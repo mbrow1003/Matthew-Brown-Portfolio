@@ -33,6 +33,12 @@ Use `scripts/extract_tag_pins.py`. It wraps `pdftotext -bbox`, which is the extr
 
 The script writes `tags.json` keyed by plan name, and reports duplicates (a mark tagged twice on one sheet).
 
+Three things it refuses or reports rather than guesses:
+
+- **The mark convention is a parameter.** `--pattern` defaults to four digits plus a letter (`2101A`) or `S<n>-<n><letter>`. A job that numbers doors `101A` or `D-101` needs its own pattern — otherwise every tag is missed with no error. Words shaped like a mark that fail the pattern are listed as near-misses; an empty tag count with a long near-miss list means the pattern is wrong, not the sheet.
+- **One page per plan.** Percent coordinates are per page. A sheet PDF with more than one page aborts until `--page N` names the page Fieldwire has; a tag on another page would otherwise pin on the wrong image.
+- **No text layer → abort.** A flattened raster has no words to find; the script says so instead of returning an empty set.
+
 ## 3. Matching tasks to tags
 
 Parse the door mark out of each task's title (the person's title convention may be `Door <mark> - <room>` - preserve it, don't rewrite to a bare mark). Then, per task:

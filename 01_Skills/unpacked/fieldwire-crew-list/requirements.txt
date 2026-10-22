@@ -1,0 +1,4 @@
+pymupdf>=1.24
+reportlab>=4.0
+Pillow>=10.0
+# plus poppler-utils for pdftotext (apt install poppler-utils / brew install poppler)

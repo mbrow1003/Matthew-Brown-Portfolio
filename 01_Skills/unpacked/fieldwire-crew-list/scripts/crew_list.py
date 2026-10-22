@@ -9,33 +9,68 @@ current. Everything older stays in Fieldwire.
 
   python3 crew_list.py --report report.pdf --title "Project - Crew List" \
       [--cutoff 2026-09-22] [--walker "Name"] [--plans "A1.1,A1.2"] [--marks "101,102"] \
-      --out crew_list.pdf --summary ops_summary.md
+      [--gate-days 7] --out crew_list.pdf --summary ops_summary.md
 
 Checklist state is read from the checkbox fill Fieldwire draws: done, N/A, failed, or open.
-An unknown fill aborts the run instead of being guessed at.
+The run refuses rather than guesses. It aborts on: a checkbox fill it does not know, a
+checkbox with no checklist text beside it, a checklist line with no checkbox that cannot be a
+wrapped continuation, or any count the independent paths disagree on.
 """
-import argparse, io, os, re, subprocess, sys, tempfile, warnings
+import argparse, io, os, re, shutil, subprocess, sys, tempfile, warnings
 from collections import Counter
 from datetime import date
-from xml.sax.saxutils import escape
 
 warnings.filterwarnings("ignore")
-import fitz  # PyMuPDF
+
+
+def _importable(m):
+    try:
+        __import__(m); return True
+    except ImportError:
+        return False
+
+
+def preflight():
+    """Name what is missing instead of failing on the first import."""
+    missing = []
+    for mods, pkg in ((("pymupdf", "fitz"), "pymupdf"), (("PIL",), "Pillow"), (("reportlab",), "reportlab")):
+        if not any(_importable(m) for m in mods):
+            missing.append(f"{pkg} (pip install {pkg})")
+    if shutil.which("pdftotext") is None:
+        missing.append("pdftotext (poppler-utils)")
+    if missing:
+        sys.exit("missing: " + "; ".join(missing) + " - see requirements.txt")
+
+
+preflight()
+try:
+    import pymupdf as fitz
+except ImportError:  # older PyMuPDF
+    import fitz
 from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
                                 Image, KeepTogether)
+from xml.sax.saxutils import escape
 
 MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 MONTHS = {m: i + 1 for i, m in enumerate(MON)}
 DATE_RE = re.compile(r"^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{2}:\d{2}\s+[AP]M)$")
 DATE_ANY = re.compile(r"\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{2}:\d{2}\s+[AP]M\b")
+CREATED_RE = re.compile(r"(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})")
 TASK_RE = re.compile(r"^#(\d+)\s*-\s*(.+)$")
 STATES = {"done": (0.3647, 0.4784, 0.7412), "na": (0.6038, 0.6039, 0.6038), "failed": (0.9255, 0.3843, 0.3255)}
-ACK = re.compile(r"^(ok|okay|k|done|thanks|thank you|got it|noted|\U0001F44D)[.!]*$", re.I)
+CLOSED = ("Completed", "Verified")          # both are closed; a Verified task with open items is still wrong
+ACK = re.compile(r"^(ok|okay|k|thanks|thank you|got it|noted|\U0001F44D)[.!]*$", re.I)
+DONE_CLAIM = re.compile(r"^(done|complete|completed|installed|finished|all set|all done|good to go)[\s.,!]*$", re.I)
 CONFIRM_SET = re.compile(r"confirm\s+set", re.I)
+SET_IN_TEXT = re.compile(r"\bSet\s+#?([A-Za-z0-9][A-Za-z0-9 ._:/\-]*?)\s*(?:[.;,]|$)")
+GATE_RE = re.compile(r"^\s*receiving\b", re.I)   # per-delivery receiving-gate tasks are titled "Receiving - <BOL> ..."
+PAIR_TOL = 5.0    # pt between a checkbox centre and the centre of its text line
+WRAP_TOL = 70.0   # a line can only have wrapped if it reached within this of the column's right edge
+WRAP_GAP = 14.0   # a continuation line sits within one line height of the line it continues
 
 
 def norm(t):
@@ -55,7 +90,7 @@ def page_lines(page):
             t = norm("".join(s["text"] for s in ln["spans"]))
             if t:
                 x0, y0, x1, y1 = ln["bbox"]
-                out.append({"t": t, "x0": x0, "y0": y0, "y1": y1, "size": max(s["size"] for s in ln["spans"])})
+                out.append({"t": t, "x0": x0, "y0": y0, "x1": x1, "y1": y1, "size": max(s["size"] for s in ln["spans"])})
     return out
 
 
@@ -71,12 +106,30 @@ def noise_lines(doc):
     return {t for t, c in seen.items() if n > 1 and c >= max(2, 0.6 * n)}
 
 
+def detect_export(doc, noise):
+    """Which export this is, from the report header. Decides what the run can see at all."""
+    heads = [ln["t"] for ln in page_lines(doc[0]) if ln["y0"] < 40] + sorted(noise) if len(doc) else []
+    for t in heads:
+        m = re.search(r"\b(Open|All)\s+Tasks\b", t, re.I)
+        if m:
+            return m.group(1).title() + " Tasks"
+    return "unknown"
+
+
 def parse(path, imgdir):
     doc = fitz.open(path)
     noise = noise_lines(doc)
-    events, saved, unknown, others = [], {}, [], []
+    info = {"unknown": [], "unpaired_boxes": [], "unpaired_text": [], "orphans": 0, "others": [],
+            "images_skipped": 0, "boxes_total": 0, "pages": len(doc), "export_type": detect_export(doc, noise)}
+    events, saved = [], {}
+    # The widest checklist line in the report is the column's right edge. Only a line that reached
+    # it can have wrapped, so only a line below such a line may stand without a checkbox.
+    col_right = max((ln["x1"] for page in doc for ln in page_lines(page) if 40 < ln["x0"] < 46), default=0.0)
+    # Photos are left-aligned with the message text; anything else (plan thumbnail top-right, pin
+    # markers) is outside the column and is skipped and counted, whatever its size.
+    body_left = min((ln["x0"] for page in doc for ln in page_lines(page) if 120 < ln["x0"] < 480), default=125.0)
     for pno, page in enumerate(doc):
-        boxes = []
+        boxes = []  # [y_centre, state, paired]
         for dr in page.get_drawings():
             r = dr["rect"]
             if not (21 < r.x0 < 25 and 9 < r.width < 11.5 and 9 < r.height < 11.5):
@@ -84,18 +137,20 @@ def parse(path, imgdir):
             yc, fill = (r.y0 + r.y1) / 2, dr.get("fill")
             if fill is None:
                 if dr.get("color") and (dr.get("width") or 0) > 1.0:
-                    boxes.append((yc, "open"))
+                    boxes.append([yc, "open", False])
                 continue
             st = next((k for k, v in STATES.items() if close(fill, v)), None)
             if st is None:
-                unknown.append((pno + 1, round(yc, 1), tuple(round(c, 4) for c in fill)))
+                info["unknown"].append((pno + 1, round(yc, 1), tuple(round(c, 4) for c in fill)))
             else:
-                boxes.append((yc, st))
+                boxes.append([yc, st, False])
+        info["boxes_total"] += len(boxes)
         for img in page.get_images(full=True):
             xref = img[0]
             for r in page.get_image_rects(xref):
-                if r.x0 > 400 or r.width < 60:
-                    continue  # plan thumbnails and pin markers sit outside the message column
+                if abs(r.x0 - body_left) > 30:
+                    info["images_skipped"] += 1
+                    continue
                 if xref not in saved:
                     try:
                         pix = fitz.Pixmap(doc, xref)
@@ -110,8 +165,9 @@ def parse(path, imgdir):
                         saved[xref] = None
                 if saved.get(xref):
                     events.append((pno, r.y0, 5, "photo", saved[xref]))
-        for ln in page_lines(page):
-            t, x0, y0, y1 = ln["t"], ln["x0"], ln["y0"], ln["y1"]
+        last_check = None  # (y1, x1) of the previous checklist line on this page
+        for ln in sorted(page_lines(page), key=lambda l: (round(l["y0"], 1), l["x0"])):
+            t, x0, y0, x1, y1 = ln["t"], ln["x0"], ln["y0"], ln["x1"], ln["y1"]
             if t in noise or t.startswith("pg. ") or t.startswith("Created with Fieldwire"):
                 continue
             mt = TASK_RE.match(t)
@@ -127,6 +183,8 @@ def parse(path, imgdir):
                     events.append((pno, y0, 1, "tags", t[5:].strip())); continue
                 if t.startswith("Created "):
                     events.append((pno, y0, 1, "created", t[8:].strip())); continue
+                if t.startswith("Description:"):
+                    events.append((pno, y0, 1, "description", t[12:].strip())); continue
                 if " | " in t:
                     events.append((pno, y0, 1, "status", t)); continue
                 if t == "Checklist" or t.startswith("Task messages"):
@@ -134,11 +192,18 @@ def parse(path, imgdir):
                 events.append((pno, y0, 2, "author", t)); continue
             if 40 < x0 < 46:
                 yc, best = (y0 + y1) / 2, None
-                for by, st in boxes:
-                    d = abs(by - yc)
-                    if d < 5 and (best is None or d < best[0]):
-                        best = (d, st)
-                events.append((pno, y0, 3, "check", {"text": t, "state": best[1] if best else None}))
+                for b in boxes:
+                    d = abs(b[0] - yc)
+                    if d < PAIR_TOL and not b[2] and (best is None or d < best[0]):
+                        best = (d, b)
+                if best:
+                    best[1][2] = True
+                    events.append((pno, y0, 3, "check", {"text": t, "state": best[1][1]}))
+                elif last_check and last_check[1] >= col_right - WRAP_TOL and 0 <= y0 - last_check[0] < WRAP_GAP:
+                    events.append((pno, y0, 3, "check", {"text": t, "state": None}))  # wrapped continuation
+                else:
+                    info["unpaired_text"].append((pno + 1, round(y0, 1), t[:60]))
+                last_check = (y1, x1)
                 continue
             if t.startswith("GPS:"):
                 continue
@@ -148,17 +213,20 @@ def parse(path, imgdir):
                 continue
             if 120 < x0 < 480:
                 events.append((pno, y0, 3, "body", t)); continue
-            others.append(f"p{pno + 1} x0={x0:.0f} {t}")
+            info["others"].append(f"p{pno + 1} x0={x0:.0f} {t}")
+        for b in boxes:
+            if not b[2]:
+                info["unpaired_boxes"].append((pno + 1, round(b[0], 1), b[1]))
     events.sort(key=lambda e: (e[0], round(e[1], 1), e[2]))
-    tasks, cur, msg, orphans = [], None, None, 0
+    tasks, cur, msg = [], None, None
     for pno, y, order, kind, p in events:
         if kind == "task":
             cur = {"num": p["num"], "mark": p["mark"], "plan": "", "tags": "", "status": "", "created": "",
-                   "checklist": [], "msgs": []}
+                   "description": "", "checklist": [], "msgs": []}
             tasks.append(cur); msg = None; continue
         if cur is None:
             continue
-        if kind in ("plan", "tags", "created", "status"):
+        if kind in ("plan", "tags", "created", "status", "description"):
             cur[kind] = p; continue
         if kind == "section":
             msg = None; continue
@@ -167,12 +235,12 @@ def parse(path, imgdir):
                 if cur["checklist"]:
                     cur["checklist"][-1]["text"] += " " + p["text"]  # wrapped line
                 else:
-                    orphans += 1
+                    info["orphans"] += 1
             else:
                 cur["checklist"].append(p)
             continue
         if kind == "author":
-            msg = {"author": p, "body": "", "day": None, "month": None, "time": "", "photos": []}
+            msg = {"author": p, "body": "", "day": None, "month": None, "year": None, "time": "", "photos": []}
             cur["msgs"].append(msg); continue
         if kind == "body" and msg is not None:
             msg["body"] = (msg["body"] + " " + p).strip(); continue
@@ -180,7 +248,7 @@ def parse(path, imgdir):
             msg.update(day=p["day"], month=p["month"], time=p["time"]); continue
         if kind == "photo" and msg is not None:
             msg["photos"].append(p)
-    return tasks, {"unknown": unknown, "orphans": orphans, "others": others, "pages": len(doc)}
+    return tasks, info
 
 
 def second_path(path):
@@ -189,9 +257,37 @@ def second_path(path):
     return len(re.findall(r"(?m)^\s*#\d+\s*-\s*\S", txt)), len(DATE_ANY.findall(txt))
 
 
+def assign_years(tasks, fallback_year):
+    """Report dates carry no year. Start from the task's Created line and roll the year forward
+    whenever a comment's month drops below the previous one. Returns how many tasks had no Created year."""
+    inferred = 0
+    for t in tasks:
+        m = CREATED_RE.search(t["created"])
+        if m:
+            y, last = int(m.group(3)), (MONTHS[m.group(2)], int(m.group(1)))
+            t["created_date"] = date(y, last[0], last[1])
+        else:
+            y, last = fallback_year, None
+            t["created_date"] = None
+            inferred += 1
+        for msg in t["msgs"]:
+            if msg["day"] is None:
+                continue
+            cur = (msg["month"], msg["day"])
+            if last is not None and cur[0] < last[0]:
+                y += 1
+            msg["year"] = y
+            last = cur
+    return inferred
+
+
+def mdate(m):
+    return (m["year"], m["month"], m["day"])
+
+
 def tkey(m):
     hh, mm = int(m["time"][:2]), int(m["time"][3:5])
-    return (m["month"], m["day"], (hh % 12 + (12 if m["time"].endswith("PM") else 0)) * 60 + mm)
+    return (m["year"], m["month"], m["day"], (hh % 12 + (12 if m["time"].endswith("PM") else 0)) * 60 + mm)
 
 
 def status_of(t):
@@ -199,9 +295,16 @@ def status_of(t):
 
 
 def set_of(t):
+    """Set context: a #set_ tag first; then 'Set <name>' in the import comment or the description."""
     tags = [x.strip() for x in t["tags"].split(",") if x.strip()]
     s = [x for x in tags if x.lower().startswith("#set_")]
-    return ("Set " + s[0][5:]) if s else ""
+    if s:
+        return "Set " + s[0][5:]
+    for text in ((t["msgs"][0]["body"] if t["msgs"] else ""), t.get("description", "")):
+        m = SET_IN_TEXT.search(text or "")
+        if m:
+            return "Set " + m.group(1).strip()
+    return ""
 
 
 def mark_key(m):
@@ -209,16 +312,18 @@ def mark_key(m):
     return (0, mm.group(1), int(mm.group(2)), mm.group(3).upper()) if mm else (1, m, 0, "")
 
 
-def build(tasks, cutoff, walker):
+def build(tasks, cutoff, cutoff_date, walker, gate_days):
     """Apply the SOP keep rules and flags. Returns per-task view dicts."""
     views = []
     for t in tasks:
         dated = [m for m in t["msgs"] if m["day"] is not None]
         first = t["msgs"][0] if t["msgs"] else None
-        issues = [m for m in dated[1:] if (m["month"], m["day"]) >= cutoff and m["body"]
-                  and not ACK.match(m["body"]) and (walker is None or m["author"] == walker)]
-        current = [(p, m) for m in dated if (m["month"], m["day"]) >= cutoff for p in m["photos"]]
-        prior = sorted([m for m in dated if m["photos"] and (m["month"], m["day"]) < cutoff], key=tkey)
+        on_after = [m for m in dated[1:] if mdate(m) >= cutoff and m["body"]]
+        claims = [m for m in on_after if DONE_CLAIM.match(m["body"])]
+        issues = [m for m in on_after if not ACK.match(m["body"]) and not DONE_CLAIM.match(m["body"])
+                  and (walker is None or m["author"] == walker)]
+        current = [(p, m) for m in dated if mdate(m) >= cutoff for p in m["photos"]]
+        prior = sorted([m for m in dated if m["photos"] and mdate(m) < cutoff], key=tkey)
         if current:
             photos = [(p, m, False) for p, m in current]
         elif prior:
@@ -233,11 +338,19 @@ def build(tasks, cutoff, walker):
             flags.append("CONFIRM SET")
         if failed:
             flags.append("FAILED ITEM")
-        if st == "Completed" and (open_items or failed):
-            flags.append("CLOSED WITH OPEN ITEMS")
+        if st in CLOSED and (open_items or failed):
+            flags.append(f"CLOSED WITH OPEN ITEMS ({st})")
+        if claims and (open_items or failed):
+            n = len(open_items) + len(failed)
+            flags.append(f"DONE CLAIMED, {n} ITEM{'S' if n != 1 else ''} OPEN")
+            issues = sorted(issues + claims, key=tkey)  # the claim that contradicts the record is shown, whoever wrote it
+        if GATE_RE.search(t["mark"]) and st not in CLOSED and t.get("created_date"):
+            days = (cutoff_date - t["created_date"]).days
+            if days > gate_days:
+                flags.append(f"RECEIVING GATE OPEN {days} DAYS")
         if not any(m["photos"] for m in t["msgs"]):
             flags.append("NO PHOTO")
-        block = st != "Completed" or bool(open_items) or bool(failed) or bool(issues)
+        block = st not in CLOSED or bool(open_items) or bool(failed) or bool(issues)
         views.append({"t": t, "first": first, "issues": issues, "photos": photos, "flags": flags,
                       "open": open_items, "failed": failed, "block": block})
     return views
@@ -246,7 +359,7 @@ def build(tasks, cutoff, walker):
 def render(views, out, title, cutoff_label, n_report):
     ss = getSampleStyleSheet()
     INK, MUTE, LINE, RED = (colors.HexColor(c) for c in ("#1A1A1A", "#8A8A8A", "#D9D9D9", "#B3261E"))
-    STATUS_COLOR = {"Issue": "#B3261E", "In Progress": "#8A6D1B", "Completed": "#2E7D32"}
+    STATUS_COLOR = {"Issue": "#B3261E", "In Progress": "#8A6D1B", "Completed": "#2E7D32", "Verified": "#2E7D32"}
     P = lambda name, **kw: ParagraphStyle(name, parent=ss["Normal"], **kw)
     title_s = P("t", fontName="Helvetica-Bold", fontSize=15, leading=18, spaceAfter=2)
     sub_s = P("s", fontSize=8, leading=10, textColor=MUTE, spaceAfter=6)
@@ -337,7 +450,7 @@ def render(views, out, title, cutoff_label, n_report):
             story.append(heading)
         if done_only:
             marks = [escape(v["t"]["mark"]) + ("*" if "NO PHOTO" in v["flags"] else "") for v in done_only]
-            story.append(Paragraph(f"[x] Complete, nothing outstanding ({len(done_only)}): " + ", ".join(marks), line_s))
+            story.append(Paragraph(f"[x] Closed, nothing outstanding ({len(done_only)}): " + ", ".join(marks), line_s))
             if any("NO PHOTO" in v["flags"] for v in done_only):
                 story.append(Paragraph("* no photo on the task", line_s))
             stats["oneliners"] += len(done_only)
@@ -354,6 +467,7 @@ def main():
     ap.add_argument("--walker", help="only this author's comments count as issue comments")
     ap.add_argument("--plans", help="comma list of plan names to keep")
     ap.add_argument("--marks", help="comma list of door marks to keep")
+    ap.add_argument("--gate-days", type=int, default=7, help="flag a receiving-gate task still open this many days after creation")
     ap.add_argument("--out", default="crew_list.pdf")
     ap.add_argument("--summary", default="ops_summary.md")
     a = ap.parse_args()
@@ -362,39 +476,65 @@ def main():
     tasks, info = parse(a.report, imgdir)
     if info["unknown"]:
         sys.exit("ABORT: checkbox fill not recognised (page, y, rgb): " + repr(info["unknown"][:5]) +
-                 " — Fieldwire may have added a state. Inspect one page and add it to STATES before trusting any output.")
+                 " - Fieldwire may have added a state. Inspect one page and add it to STATES before trusting any output.")
+    if info["unpaired_boxes"]:
+        sys.exit(f"ABORT: {len(info['unpaired_boxes'])} checkbox(es) with no checklist text within {PAIR_TOL:g} pt "
+                 f"(page, y, state): {info['unpaired_boxes'][:5]!r} - the layout shifted; an item would have been "
+                 "merged into the one above it.")
+    if info["unpaired_text"]:
+        sys.exit(f"ABORT: {len(info['unpaired_text'])} checklist line(s) with no checkbox that cannot be a wrapped "
+                 f"continuation (page, y, text): {info['unpaired_text'][:5]!r} - inspect the page; do not send.")
     heads, date_rows = second_path(a.report)
     n_msgs = sum(1 for t in tasks for m in t["msgs"] if m["day"] is not None)
+    n_items = sum(len(t["checklist"]) for t in tasks)
     problems = []
     if heads != len(tasks):
         problems.append(f"task headers: pdftotext {heads} vs parser {len(tasks)}")
     if date_rows != n_msgs:
         problems.append(f"message rows: pdftotext {date_rows} vs parser {n_msgs}")
+    if info["boxes_total"] != n_items:
+        problems.append(f"checkbox drawings {info['boxes_total']} vs checklist items parsed {n_items}")
     if info["orphans"]:
-        problems.append(f"{info['orphans']} checklist line(s) with no checkbox")
+        problems.append(f"{info['orphans']} checklist line(s) before any checkbox")
     if problems:
-        sys.exit("ABORT: second-path check failed — " + "; ".join(problems))
+        sys.exit("ABORT: independent-path check failed - " + "; ".join(problems))
 
-    all_dates = [(m["month"], m["day"]) for t in tasks for m in t["msgs"] if m["day"] is not None]
+    cutoff_year = date.fromisoformat(a.cutoff).year if a.cutoff else date.today().year
+    inferred = assign_years(tasks, cutoff_year)
+    all_dates = [mdate(m) for t in tasks for m in t["msgs"] if m["day"] is not None]
     if a.cutoff:
-        d = date.fromisoformat(a.cutoff); cutoff = (d.month, d.day); cutoff_label = f"{d.day} {MON[d.month - 1]} {d.year}"
+        d = date.fromisoformat(a.cutoff)
     else:
-        cutoff = max(all_dates); cutoff_label = f"{cutoff[1]} {MON[cutoff[0] - 1]} (newest comment date in the report)"
+        y, mo, dd = max(all_dates); d = date(y, mo, dd)
+    cutoff = (d.year, d.month, d.day)
+    cutoff_label = f"{d.day} {MON[d.month - 1]} {d.year}" + ("" if a.cutoff else " (newest comment date in the report)")
     keep = tasks
     if a.plans:
         want = {p.strip() for p in a.plans.split(",")}; keep = [t for t in keep if t["plan"] in want]
     if a.marks:
         want = {p.strip() for p in a.marks.split(",")}; keep = [t for t in keep if t["mark"] in want]
 
-    views = build(keep, cutoff, a.walker)
+    views = build(keep, cutoff, d, a.walker, a.gate_days)
     stats = render(views, a.out, a.title, cutoff_label, len(keep))
     assert stats["blocks"] + stats["oneliners"] == len(keep), "openings on the list != openings after filtering"
 
     states = Counter(c["state"] for t in keep for c in t["checklist"])
     flagged = [v for v in views if v["flags"]]
+    closed_seen = sum(1 for t in tasks if status_of(t) in CLOSED)
+    export = info["export_type"]
+    if export == "Open Tasks":
+        export_note = "Open Tasks export: completed tasks are not in this report, so CLOSED WITH OPEN ITEMS can only fire on tasks that are still in it."
+    elif export == "unknown" and closed_seen == 0:
+        export_note = "Export type not stated in the header and no closed task appears. If this is an Open Tasks export, closed tasks are not visible to this run."
+    else:
+        export_note = f"{export} export; {closed_seen} closed task(s) in the report."
+    year_note = ("Years taken from each task's Created line; the year rolls forward when a comment's month drops."
+                 if not inferred else
+                 f"{inferred} task(s) had no Created year; {cutoff_year} assumed for them and rolled forward from there.")
     lines = [f"# Ops lead summary — {a.title}", "",
              f"Cutoff: {cutoff_label}", "",
              "| | |", "|---|---|",
+             f"| Export | {export} |",
              f"| Openings in report | {len(tasks)} |",
              f"| Openings after filter | {len(keep)} |",
              f"| Full blocks / one-line completes | {stats['blocks']} / {stats['oneliners']} |",
@@ -402,14 +542,18 @@ def main():
              f"| Issue comments shown | {stats['issue_comments']} |",
              f"| Photos shown | {stats['photos_current'] + stats['photos_fallback']} — {stats['photos_current']} current, {stats['photos_fallback']} fallback |",
              f"| Openings using a fallback photo | {stats['tasks_fallback']} |",
+             f"| Images outside the message column skipped | {info['images_skipped']} (plan thumbnails, markers) |",
              f"| Flagged openings | {len(flagged)} |", "",
-             f"Second-path check (pdftotext vs parser): task headers {heads} = {len(tasks)}; message rows {date_rows} = {n_msgs}.", "",
+             export_note, "", year_note, "",
+             f"Independent-path check: task headers pdftotext {heads} = parser {len(tasks)}; message rows {date_rows} = {n_msgs}; "
+             f"checkbox drawings {info['boxes_total']} = checklist items {n_items}.", "",
              "## Flagged openings", ""]
     lines += [f"- **{v['t']['mark']}** (#{v['t']['num']}, {status_of(v['t'])}) — {', '.join(v['flags'])}" for v in flagged] or ["None — verified."]
     lines += ["", "Authors are shown exactly as Fieldwire records them. Accounts are sometimes shared; confirm who was on site before attributing a comment to a person."]
     open(a.summary, "w").write("\n".join(lines) + "\n")
-    print(f"ok: {len(keep)} openings -> {stats['blocks']} blocks + {stats['oneliners']} one-liners; "
-          f"checklist {dict(states)}; flagged {len(flagged)}; second path {heads}={len(tasks)}, {date_rows}={n_msgs}")
+    print(f"ok: {export}; {len(keep)} openings -> {stats['blocks']} blocks + {stats['oneliners']} one-liners; "
+          f"checklist {dict(states)}; flagged {len(flagged)}; paths {heads}={len(tasks)}, {date_rows}={n_msgs}, "
+          f"boxes {info['boxes_total']}={n_items}; images skipped {info['images_skipped']}")
 
 
 if __name__ == "__main__":

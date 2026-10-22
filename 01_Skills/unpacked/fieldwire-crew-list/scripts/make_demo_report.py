@@ -7,7 +7,21 @@ message body at x 120-480, dates at x>480, photos in the message column, plan th
 It exists so the parser can be exercised without client data. It is not Fieldwire output.
 
   python3 make_demo_report.py --tasks Fieldwire_Task_Import.csv \
-      --checklists Fieldwire_Checklist_Setup.csv --out demo_report.pdf
+      --checklists Fieldwire_Checklist_Setup.csv --out demo_report.pdf [--case <name>]
+
+--case plants one failure the parser must catch, or one legitimate layout it must not trip on:
+  box-offset        one checkbox drawn 6 pt below its text (WP-01)        -> must abort
+  box-missing       one checkbox omitted on a non-first item (WP-02)      -> must abort
+  box-missing-first one checkbox omitted on a first item (WP-02)          -> must abort
+  wrapped-item      one checklist item long enough to wrap to two lines   -> must pass, items unchanged
+  verified-open     V-104 in Verified status with open items              -> CLOSED WITH OPEN ITEMS (Verified)
+  done-claim        installer posts "Done" on V-104 with open items       -> DONE CLAIMED, 7 ITEMS OPEN
+  year-boundary     V-104 walked 30 Dec, issue posted 2 Jan               -> both comments shown (cutoff 2026-12-30)
+  narrow-photo      V-102's photo drawn 55 pt wide                        -> still a photo, no NO PHOTO
+  color-shift       the done fill shifted by 0.03                         -> must abort (unknown state)
+  no-set-tag        no #set_ tag on any task                               -> set still read from the import comment
+A task whose Title starts with "Receiving" is drawn as a per-delivery receiving-gate task, created
+25 Aug and still In Progress, so the stale-gate flag has something to fire on.
 """
 import argparse, csv, os, tempfile
 from collections import defaultdict
@@ -20,6 +34,10 @@ TITLE = "Demo Hotel Lobby Millwork - Open Tasks (Detailed)"
 FILL = {"done": (0.3647, 0.4784, 0.7412), "na": (0.6038, 0.6039, 0.6038), "failed": (0.9255, 0.3843, 0.3255)}
 RANK = {"FIELD VERIFICATION": 0, "HOLD": 0, "RELEASED TO SHOP": 1, "IN SHOP": 2, "DELIVERED": 3, "INSTALLED": 4, "ACCEPTED": 5}
 IMPORT = "1 Sep 08:00 AM"
+CASES = ("box-offset", "box-missing", "box-missing-first", "wrapped-item", "verified-open", "done-claim",
+         "year-boundary", "narrow-photo", "color-shift", "no-set-tag")
+LONG = (" - confirm the reveal is even top to bottom on both edges and that every cleat is fully engaged "
+        "before the lift is released and the protection goes back on")
 # (author, date, body, photo caption or None) after the import comment. Cutoff for the demo is 8 Sep.
 MSGS = {
  "RD-01": [("T. Nguyen", "4 Sep 10:12 AM", "Field dims taken.", "field dims"),
@@ -87,7 +105,7 @@ def states(cat, ctype, lines, mark):
         elif ln.startswith("GATE: RELEASED"):
             s = "done" if r >= 1 else "open"
         elif k == "SHOP":
-            s = "done" if r >= 3 else ("done" if r == 2 and sum(1 for x in out if x) < 0 else "open")
+            s = "done" if r >= 3 else "open"
             if r == 2:
                 s = "done" if ln.startswith(("SHOP: Cut list", "SHOP: Fabricated")) else "open"
         elif k == "SITE":
@@ -97,20 +115,34 @@ def states(cat, ctype, lines, mark):
                 s = "done" if ln.startswith("SITE: Delivered") else "open"
             else:
                 s = "open"
-        else:  # GATE: ACCEPTED
+        else:  # GATE: ACCEPTED, and every receiving-gate line
             s = "open"
         out.append(s)
     return out
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tasks", required=True); ap.add_argument("--checklists", required=True); ap.add_argument("--out", required=True)
+    ap.add_argument("--case", choices=CASES, default=None, help="plant one adversarial or edge case (see above)")
     a = ap.parse_args()
+    case = a.case
+    fill = dict(FILL)
+    if case == "color-shift":
+        fill["done"] = (0.3947, 0.4784, 0.7412)
     cl = defaultdict(list)
     for row in csv.DictReader(open(a.checklists)):
         cl[row["Checklist"]].append(row["Item"])
+    if case == "wrapped-item":
+        for name in cl:
+            cl[name] = [x + LONG if x.startswith("SITE: Installed on cleats") else x for x in cl[name]]
     rows = list(csv.DictReader(open(a.tasks)))
+    msgs = {k: list(v) for k, v in MSGS.items()}
+    if case == "done-claim":
+        msgs["V-104"] = [("Install Crew", "8 Sep 03:00 PM", "Done", None)]
+    if case == "year-boundary":
+        msgs["V-104"] = [("A. Reyes", "30 Dec 09:00 AM", "Walked, centerline still unverified.", None),
+                         ("A. Reyes", "2 Jan 09:00 AM", "Plumber moved the rough-in 2in - vanity will not fit as drawn.", None)]
     tmp = tempfile.mkdtemp(prefix="fixture_")
     plan_img = os.path.join(tmp, "plan.jpg")
     Image.new("RGB", (420, 270), (225, 225, 225)).save(plan_img)
@@ -138,28 +170,41 @@ def main():
         if i > 1:
             c.showPage(); page[0] += 1; chrome()
         mark, cat, cname = row["Title"], row["Category"], row["Checklist"]
-        ctype = cname.split("-", 1)[1]
+        gate = mark.lower().startswith("receiving")
+        ctype = cname.split("-", 1)[-1]
         status = {"HOLD": "Issue | Priority 1", "ACCEPTED": "Completed | Priority 2"}.get(cat, "In Progress | Priority 2")
         if mark == "V-103":
             status = "Completed | Priority 2"  # closed early in the field: the flag should catch it
+        if case == "verified-open" and mark == "V-104":
+            status = "Verified | Priority 2"
+        created = "Created 25 Aug 2026 by A. Reyes" if gate else "Created 01 Sep 2026 by A. Reyes"
+        tags = "Tags: #demo" if (case == "no-set-tag" or gate) else f"Tags: #set_{cname}, #demo"
         y[0] = 30
         text(22, y[0], f"#{i} - {mark}", 12, "Helvetica-Bold")
         c.drawImage(plan_img, 440, H - 30 - 90, 140, 90)
-        for s in (f"Plan: {row['Plan']}", f"Tags: #set_{cname}, #demo", "Created 01 Sep 2026 by A. Reyes", status):
+        for s in (f"Plan: {row['Plan']}", tags, created, status):
             y[0] += 14; text(22, y[0], s)
         y[0] = 132; text(22, y[0], "Checklist", 9, "Helvetica-Bold"); y[0] += 16
         for ln, st in zip(cl[cname], states(cat, ctype, cl[cname], mark)):
             parts = simpleSplit(ln, "Helvetica", 8.5, 540)
             need(12 * len(parts))
-            if st == "open":
-                c.setStrokeColorRGB(0.55, 0.55, 0.55); c.setLineWidth(1.2); c.rect(22.5, H - y[0] - 9.5, 10, 10, stroke=1, fill=0)
+            off = 6 if (case == "box-offset" and mark == "WP-01" and ln.startswith("FIELD: Compare")) else 0
+            skip = ((case == "box-missing" and mark == "WP-02" and ln.startswith("FIELD: Compare")) or
+                    (case == "box-missing-first" and mark == "WP-02" and ln.startswith("FIELD: Verify")))
+            if skip:
+                pass
+            elif st == "open":
+                c.setStrokeColorRGB(0.55, 0.55, 0.55); c.setLineWidth(1.2); c.rect(22.5, H - y[0] - 9.5 - off, 10, 10, stroke=1, fill=0)
             else:
-                c.setFillColorRGB(*FILL[st]); c.rect(22.5, H - y[0] - 9.5, 10, 10, stroke=0, fill=1); c.setFillColorRGB(0, 0, 0)
+                c.setFillColorRGB(*fill[st]); c.rect(22.5, H - y[0] - 9.5 - off, 10, 10, stroke=0, fill=1); c.setFillColorRGB(0, 0, 0)
             for j, p in enumerate(parts):
                 text(43, y[0], p); y[0] += 12
         y[0] += 8; need(20); text(22, y[0], "Task messages", 9, "Helvetica-Bold"); y[0] += 16
-        imp = "Imported 09/01 from the L1 package. " + ("CONFIRM SET - transaction top type depends on the RD-01 disposition." if mark == "CT-02" else f"Set {cname}.")
-        for author, when, body, cap in [("A. Reyes", IMPORT, imp, None)] + MSGS.get(mark, []):
+        if gate:
+            imp = "Receiving gate for this delivery - count against the slip before anything is called short."
+        else:
+            imp = "Imported 09/01 from the L1 package. " + ("CONFIRM SET - transaction top type depends on the RD-01 disposition." if mark == "CT-02" else f"Set {cname}.")
+        for author, when, body, cap in [("A. Reyes", IMPORT, imp, None)] + msgs.get(mark, []):
             parts = simpleSplit(body, "Helvetica", 8.5, 340)
             need(14 + 11 * len(parts) + (82 if cap else 0))
             text(22, y[0], author, 8.5, "Helvetica-Bold"); text(490, y[0], when, 8)
@@ -169,9 +214,10 @@ def main():
             if cap:
                 pth = os.path.join(tmp, f"{mark}_{when.replace(' ', '_').replace(':', '')}.jpg")
                 photo(pth, mark, cap, when.rsplit(" ", 2)[0], colors_by[RANK[cat]])
-                c.drawImage(pth, 130, H - y[0] - 75, 100, 75); y[0] += 82
+                wpt = 55 if (case == "narrow-photo" and mark == "V-102") else 100
+                c.drawImage(pth, 130, H - y[0] - 75, wpt, 75); y[0] += 82
     c.save()
-    print("fixture:", a.out, "| tasks:", len(rows), "| pages:", page[0])
+    print("fixture:", a.out, "| tasks:", len(rows), "| pages:", page[0], "| case:", case or "baseline")
 
 
 if __name__ == "__main__":

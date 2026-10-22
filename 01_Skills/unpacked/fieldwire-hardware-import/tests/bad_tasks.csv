@@ -1,0 +1,5 @@
+ID,Title,Location,Description,Checklist,Plan,X pos (%),Y pos (%)
+77,1001,CORRIDOR 1,"Set 1.0 | 3' 0"" x 7' 0"" x 1 3/4"" | 90 min | HMD / HMF | LH | Closer",1FL-1.0 ,1FL PLAN,12.5,40.2
+78,1001,OFFICE 102,,1FL-2.0,1FL PLAN,101,40.2
+78,1003,VESTIBULE,"NOT IN HW SUBMITTAL | All-glass entrance | #glazing",1FL-2.0,2FL PLAN,,40.2
+80,2001,OFFICE 201,"Set 2.0 | 3' 0"" x 7' 0"" x 1 3/4"" | 20 min | WD / HMF | RH",2.0,2FL PLAN,abc,10

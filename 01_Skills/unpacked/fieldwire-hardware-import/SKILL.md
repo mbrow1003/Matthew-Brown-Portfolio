@@ -1,18 +1,6 @@
 ---
-name: fieldwire-hardware-import
-description: >-
-  Convert a door hardware submittal (door index + grouped hardware schedule) into
-  Fieldwire-ready CSVs: a task import (one row per opening, with pins) and a
-  checklist setup (one checklist per hardware heading), plus the Fieldwire Build
-  Brief, the client-facing reconciliation document. Use whenever the user
-  uploads or references a hardware submittal, door schedule, hardware schedule,
-  keying schedule, or supplier package and wants Fieldwire tasks, checklists, or a
-  hardware import, even if they don't say "Fieldwire." Also use for reconciling a
-  Fieldwire task export against a schedule, mid-job set revisions with pins
-  preserved, pinning tasks from architect floor-plan PDFs, cross-checking an
-  architect door schedule (A-2.xx) against a submittal, auditing which checklists
-  are attached, or producing a batch of checklists to create. Prefer it over ad-hoc
-  CSV building whenever hardware sets, door schedules, or Fieldwire pins are involved.
+name: "fieldwire-hardware-import"
+description: 'Convert a door hardware submittal (door index + grouped hardware schedule) into Fieldwire-ready CSVs: a task import (one row per opening, with pins) and a checklist setup (one checklist per hardware heading), plus the Fieldwire Build Brief, the client-facing reconciliation document. Use whenever the user uploads or references a hardware submittal, door schedule, hardware schedule, keying schedule, or supplier package and wants Fieldwire tasks, checklists, or a hardware import, even if they don''t say "Fieldwire." Also use for reconciling a Fieldwire task export against a schedule, mid-job set revisions with pins preserved, pinning tasks from architect floor-plan PDFs, cross-checking an architect door schedule (A-2.xx) against a submittal, auditing which checklists are attached, or producing a batch of checklists to create. Prefer it over ad-hoc CSV building whenever hardware sets, door schedules, or Fieldwire pins are involved.'
 ---
 
 # Fieldwire Hardware Set Import
@@ -61,7 +49,7 @@ Before generating anything, read `references/format-spec.md` — it defines the 
 
 2b. **Audit what's already attached** on a reconciliation with a Detailed export: group tasks by their checklist-item signature and compare to the heading the schedule assigns. Wrong-checklist attachments show up as a hardware signature that contradicts the heading (stair items on a break-room door). List the IDs. See "Imports add, they don't remove."
 
-2c. **Derive pins** if tasks are unpinned and plan sheets are available — `references/plan-pinning.md`, then `scripts/extract_tag_pins.py`. Verify visually before anything else.
+2c. **Derive pins** if tasks are unpinned and plan sheets are available — `references/plan-pinning.md`, then `scripts/extract_tag_pins.py`. Write `--pattern` to the job's door-mark convention (the default is one convention, not all of them), pass `--page N` for any sheet PDF with more than one page, and read the near-miss list it prints before trusting the tag count. Verify visually before anything else.
 
 3. **Build OUTPUT 1 (task import).** One row per opening — on a reconciliation, one row per existing task including non-submittal ones. Follow the description recipe in `references/format-spec.md` exactly; every row gets a description, none blank. The `Checklist` column value must match the `Checklist` name in OUTPUT 2 character-for-character. Pins ride in the same file — never a separate pin-only import.
 
@@ -69,7 +57,7 @@ Before generating anything, read `references/format-spec.md` — it defines the 
 
 5. **Build OUTPUT 3 (the Build Brief).** Always. Summary line, then the seven sections in order, every row with an owner. Every count, every exception, every open question.
 
-6. **Validate before presenting.** Run the checks in "Self-check" below. Fix any failure before handing files over.
+6. **Validate before presenting.** Run `python3 scripts/validate_import.py --tasks <OUTPUT 1> --checklists <OUTPUT 2> [--index <door index>]`. It fails on what breaks an import (a checklist name off by a trailing space, a blank description, a pin outside 0–100, an unprefixed heading colliding with a prefixed one, an Install line with no product number, a repeated ID) and warns on what needs a decision (duplicate marks — verified shells are intentional, confirm each; unprefixed names on a multi-package job; a quantity flagged `total`). Then run the checks in "Self-check" below that no script can see. Fix any failure before handing files over.
 
 7. **Present the files** for download with the deployment order: create checklists (exact names) → strip any wrong checklists by hand → import one test row (pin + checklist attach) → import the rest. Nothing to re-export afterwards unless plans or tasks change; coordinates are already in hand.
 
@@ -184,8 +172,8 @@ Critical: update the checklist template **before** the task goes active. Once a 
 
 ## Self-check (run before presenting)
 
+- `scripts/validate_import.py` passes with no failures (exact checklist-name match, no blank description, pins in range, IDs unique, no prefix collisions, product numbers on every Install line, index count when given). Its warnings were each read and answered.
 - Every opening in the index has exactly one task row; counts match and the reconciliation arithmetic closes.
-- Every `Checklist` value in OUTPUT 1 exactly matches a `Checklist` name in OUTPUT 2 (character-for-character — this is the #1 cause of failed imports).
 - Checklist names are package-prefixed on multi-package jobs; no two packages share a name.
 - Every PDF was read to its last page, not truncated at the first catalog page.
 - Every markup found is either resolved into the output or listed in the Build Brief.
@@ -193,7 +181,7 @@ Critical: update the checklist template **before** the task goes active. Once a 
 - Every checklist line item includes its product number.
 - Every electrified opening — including ones electrified only by trim or power-transfer hinge — has the by-others line, the compatibility line, and a functional-verification line.
 - Held openings are listed, not imported. Non-submittal tasks are imported with a sourced `NOT IN HW SUBMITTAL` description and blank checklist — no description is blank.
-- Pin coordinates were verified visually on a rendered sheet (one horizontal tag, one rotated) before presenting; the person was told to test one row first.
+- Pin coordinates were verified visually on a rendered sheet (one horizontal tag, one rotated) before presenting; the person was told to test one row first. The extractor's near-miss list was empty or explained, and every sheet PDF ran on the page Fieldwire has.
 - Ratings were cross-checked against the architect schedule; `Non-rated per architect schedule` only where that column is blank; disagreements carry an `OPEN REVIEW:` flag.
 - On a Detailed export, attached checklist items were audited against headings; wrong attachments are listed by ID with the tag to strip.
 - The supplier is named only if the document names it.
@@ -209,3 +197,13 @@ Output is plain, forward-ready, no inflation. Ambiguities are surfaced in chat, 
 Every task carries a description with its status flag — the person's convention is a hashtag (`#hw-tbd` plus a scope tag) that Fieldwire turns into a filterable tag on import. A blank description is a task nobody can filter.
 
 The governing discipline is falsification before escalation: nothing is called missing, short, or complete until it's been tested against the paperwork. The files should make it harder, not easier, to close an opening that isn't actually done.
+
+## Scripts and dependencies
+
+- `scripts/extract_tag_pins.py` — pin coordinates from a sheet's text layer (`--pattern`, `--page`, near-miss report, `--check-png`).
+- `scripts/validate_import.py` — the import gate for OUTPUT 1 and OUTPUT 2; `tests/test_validate_import.py` proves it against a clean pair and a broken pair. On a file built by `fieldwire-qaqc-gate` it skips the hardware description recipe and applies everything else.
+- `requirements.txt` — poppler-utils for `pdftotext`/`pdftoppm`; Pillow only for the check render. Both scripts name what is missing instead of failing on an import.
+
+## Version
+
+v2.3 — `validate_import.py` added; the pin extractor reports near-misses, refuses multi-page sheets without `--page`, and aborts on a sheet with no text layer; dependencies declared. Built on v2.2 (Build Brief, `--pattern`, genericized examples).

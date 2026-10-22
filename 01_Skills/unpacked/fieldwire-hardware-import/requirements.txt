@@ -1,0 +1,2 @@
+Pillow>=10.0   # only for --check-png in scripts/extract_tag_pins.py
+# plus poppler-utils for pdftotext and pdftoppm (apt install poppler-utils / brew install poppler)
